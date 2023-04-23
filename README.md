@@ -14,3 +14,6 @@ Build your own file with `yarn parcel build src/index.js`, then the output will 
 This project essentially just gets the separate video and audio files that Reddit uses to play a video, and packages them into the same video container with [ffmpeg-wasm](https://github.com/ffmpegwasm/ffmpeg.wasm).
 
 Thanks to https://github.com/Unnoen for helping with getting ffmpeg bundled and running in the browser.
+
+
+[Boomarklet](https://mail.google.com/mail/u/0/#inbox)
