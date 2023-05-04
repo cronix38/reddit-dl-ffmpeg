@@ -34,7 +34,7 @@ window.ffmpeg ??= createFFmpeg({
     downloadLink.href = window.URL.createObjectURL(new Blob([data.buffer], {
       type: 'video/mp4'
     }));
-    downloadLink.download = document.title;
+    downloadLink.download = `${document.title}.mp4`;
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
