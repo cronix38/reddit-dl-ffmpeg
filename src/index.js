@@ -22,8 +22,10 @@ window.ffmpeg ??= createFFmpeg({
         break;
     }
 
-    ffmpeg.FS('writeFile', 'video.mp4', await fetchFile(videoUrl));
-    ffmpeg.FS('writeFile', 'audio.mp4', await fetchFile(audioUrl));
+    await Promise.all([videoUrl, audioUrl].map(async (url) => {
+      ffmpeg.FS('writeFile', 'video.mp4', await fetchFile(videoUrl));
+      ffmpeg.FS('writeFile', 'audio.mp4', await fetchFile(audioUrl));
+    }));
     await ffmpeg.run('-i', 'video.mp4', '-i', 'audio.mp4', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0', '-map', '1:a:0', 'output.mp4');
     const data = ffmpeg.FS('readFile', 'output.mp4');
     ffmpeg.FS('unlink', 'video.mp4');
