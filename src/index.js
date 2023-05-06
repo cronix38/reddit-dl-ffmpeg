@@ -14,31 +14,39 @@ window.ffmpeg ??= createFFmpeg({
   // get the base url for the video and audio files
   const baseUrl = document.querySelector('.thumbnail')?.getAttribute('href');
 
-  // Check if audio file exists and set audio url
-  const audioUrl = `${baseUrl}/DASH_audio.mp4`;
-  const audioExists = (await fetch(audioUrl, { method: 'HEAD' })).status === 200;
-
-  // Check for video file exists and set video url
-  let videoUrl = '';
-  for (const c of [1080, 720, 480, 360, 240, 220]) {
-    const response = await fetch(`${baseUrl}/DASH_${c}.mp4`, {
-      method: 'HEAD'
-    });
-    if (response.status === 200) {
-      videoUrl = `${baseUrl}/DASH_${c}.mp4`;
-      break;
+  const videoPromise = (async () => {
+    for (const c of [1080, 720, 480, 360, 240, 220]) {
+      const dataUrl = `${baseUrl}/DASH_${c}.mp4`;
+      const response = await fetch(dataUrl, {
+        method: 'HEAD'
+      });
+      if (response.status === 200) {
+        const file = await fetchFile(dataUrl);
+        await ffmpeg.FS('writeFile', 'video.mp4', file);
+        return true;
+      }
     }
-  }
+    return false;
+  })();
+
+  const audioPromise = (async () => {
+    const audioUrl = `${baseUrl}/DASH_audio.mp4`;
+    if ((await fetch(audioUrl, { method: 'HEAD' })).status === 200) {
+      const file = await fetchFile(audioUrl);
+      await ffmpeg.FS('writeFile', 'audio.mp4', file);
+      return true;
+    }
+    return false
+  })();
 
   // fetch then write video and audio files simultaneously
   await Promise.all([
-    fetchFile(videoUrl).then(file => ffmpeg.FS('writeFile', 'video.mp4', file)),
-    audioExists && fetchFile(audioUrl).then(file => ffmpeg.FS('writeFile', 'audio.mp4', file)),
+    videoPromise,
+    audioPromise
   ]);
 
-
   // either merge the video and audio, or just rename the video file if there is no audio
-  if (audioExists) {
+  if (await audioPromise) {
     await ffmpeg.run('-i', 'video.mp4', '-i', 'audio.mp4', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0', '-map', '1:a:0', 'output.mp4');
   } else {
     await ffmpeg.run('-i', 'video.mp4', '-c:v', 'copy', '-c:a', 'copy', '-map', '0:v:0', 'output.mp4');
