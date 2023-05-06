@@ -1,4 +1,4 @@
-import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg';
+import { createFFmpeg } from '@ffmpeg/ffmpeg';
 
 // assign ffmpeg to window.ffmpeg if it doesn't already exist
 window.ffmpeg ??= createFFmpeg({
