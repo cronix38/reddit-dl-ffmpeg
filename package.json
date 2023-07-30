@@ -7,7 +7,7 @@
     "request": "^2.88.2"
   },
   "type": "module",
-  "packageManager": "yarn@3.5.0",
+  "packageManager": "yarn@3.6.1",
   "devDependencies": {
     "assert": "^2.0.0",
     "browserify-zlib": "^0.2.0",

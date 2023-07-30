@@ -15,8 +15,8 @@ window.ffmpeg ??= createFFmpeg({
   const baseUrl = document.querySelector('.thumbnail')?.getAttribute('href');
 
   const videoPromise = (async () => {
-    for (const c of [1080, 720, 480, 360, 240, 220]) {
-      const response = await fetch(`${baseUrl}/DASH_${c}.mp4`);
+    for (const resolution of [1080, 720, 480, 360, 270, 240, 220]) {
+      const response = await fetch(`${baseUrl}/DASH_${resolution}.mp4`);
       if (response.status === 200) {
         await ffmpeg.FS('writeFile', 'video.mp4', new Uint8Array(await response.arrayBuffer()));
         return true;
@@ -26,13 +26,16 @@ window.ffmpeg ??= createFFmpeg({
   })();
 
   const audioPromise = (async () => {
-    const response = await fetch(`${baseUrl}/DASH_audio.mp4`);
-    if (response.status === 200) {
-      await ffmpeg.FS('writeFile', 'audio.mp4', new Uint8Array(await response.arrayBuffer()));
-      return true;
+    for (const bitrate of ['', '_128', '_64']) {
+      const response = await fetch(`${baseUrl}/DASH_AUDIO${bitrate}.mp4`);
+      if (response.status === 200) {
+        await ffmpeg.FS('writeFile', 'audio.mp4', new Uint8Array(await response.arrayBuffer()));
+        return true;
+      }
     }
-    return false
+    return false;
   })();
+
 
   // fetch then write video and audio files simultaneously
   await Promise.allSettled([
