@@ -26,8 +26,8 @@ window.ffmpeg ??= createFFmpeg({
   })();
 
   const audioPromise = (async () => {
-    for (const bitrate of ['', '_128', '_64']) {
-      const response = await fetch(`${baseUrl}/DASH_AUDIO${bitrate}.mp4`);
+    for (const bitrateSuffix of ['audio', 'AUDIO_128', 'AUDIO_64']) {
+      const response = await fetch(`${baseUrl}/DASH_${bitrateSuffix}.mp4`);
       if (response.status === 200) {
         await ffmpeg.FS('writeFile', 'audio.mp4', new Uint8Array(await response.arrayBuffer()));
         return true;
