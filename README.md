@@ -1,6 +1,6 @@
 # reddit-dl-ffmpeg
 
-Currently only works on 'old reddit', such using Reddit Enhancement Suite or old.reddit.com.
+Currently only works on 'old reddit', such as using Reddit Enhancement Suite or old.reddit.com.
 
 Contents of file `dist\index.js` in this repo can be copy and pasted into the console on a Reddit page with an .mp4 video such as https://www.reddit.com/r/aww/comments/12ujv9d/employee_of_the_month/ to download the video.
 
