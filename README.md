@@ -4,7 +4,7 @@ Currently only works on 'old reddit', such as using Reddit Enhancement Suite or 
 
 Contents of file `dist\index.js` in this repo can be copy and pasted into the console on a Reddit page with an .mp4 video such as https://www.reddit.com/r/aww/comments/12ujv9d/employee_of_the_month/ to download the video.
 
-To use this more easily, save it as a boomarklet. Create a new bookmark, and and enter `javascript:` followed by pasting the entire script as the url target. This allows you to simply open a reddit page and click on the bookmark to download the video.
+To use this more easily, save it as a boomarklet. Create a new bookmark, and enter `javascript:` followed by pasting the entire script as the url target. This allows you to simply open a reddit page and click on the bookmark to download the video.
 
 ![chrome_9XB0J6E8he](https://user-images.githubusercontent.com/102277225/233794262-1da64589-5480-4438-9590-874bb12805ce.png)
 
