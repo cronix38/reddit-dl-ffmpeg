@@ -1,4 +1,5 @@
 import { createFFmpeg } from '@ffmpeg/ffmpeg';
+import { Parser } from 'm3u8-parser';
 
 // assign ffmpeg to window.ffmpeg if it doesn't already exist
 window.ffmpeg ??= createFFmpeg({
@@ -8,57 +9,65 @@ window.ffmpeg ??= createFFmpeg({
 });
 
 (async () => {
-  // load ffmpeg if it isn't already loaded
-  window.ffmpeg.isLoaded() || await window.ffmpeg.load();
+  // Load ffmpeg if it isn't already loaded
+  if (!window.ffmpeg.isLoaded()) await window.ffmpeg.load();
 
-  // get the base url for the video and audio files
-  const baseUrl = document.querySelector('.thumbnail')?.getAttribute('href');
+  // Get the .m3u8 URL from the HTML
+  const m3u8Url = document.querySelector('[data-hls-url]')?.getAttribute('data-hls-url') ||  document.querySelector('shreddit-player source')?.getAttribute('src'); ;
+  if (!m3u8Url) return;
 
-  const videoPromise = (async () => {
-    for (const resolution of [1080, 720, 480, 360, 270, 240, 220]) {
-      const response = await fetch(`${baseUrl}/DASH_${resolution}.mp4`);
-      if (response.status === 200) {
-        await ffmpeg.FS('writeFile', 'video.mp4', new Uint8Array(await response.arrayBuffer()));
-        return true;
-      }
-    }
-    return false;
-  })();
+  // Fetch and parse the master .m3u8 file
+  const response = await fetch(m3u8Url);
+  const masterPlaylistContent = await response.text();
+  const masterParser = new Parser();
+  masterParser.push(masterPlaylistContent);
+  masterParser.end();
+  const masterPlaylist = masterParser.manifest;
 
-  const audioPromise = (async () => {
-    for (const bitrateSuffix of ['audio', 'AUDIO_128', 'AUDIO_64']) {
-      const response = await fetch(`${baseUrl}/DASH_${bitrateSuffix}.mp4`);
-      if (response.status === 200) {
-        await ffmpeg.FS('writeFile', 'audio.mp4', new Uint8Array(await response.arrayBuffer()));
-        return true;
-      }
-    }
-    return false;
-  })();
+  // Find the highest resolution video and default audio playlists
+  const videoVariant = masterPlaylist.playlists.reduce((prev, curr) => 
+    prev.attributes.BANDWIDTH > curr.attributes.BANDWIDTH ? prev : curr
+  );
 
+  const audioGroupId = videoVariant.attributes.AUDIO;
+  const audioVariants = masterPlaylist.mediaGroups.AUDIO[audioGroupId];
+  const audioVariant = Object.values(audioVariants).find(audio => audio.default);
+  const videoPlaylistUrl = new URL(videoVariant.uri, m3u8Url).toString();
+  const audioPlaylistUrl = new URL(audioVariant.uri, m3u8Url).toString();
 
-  // fetch then write video and audio files simultaneously
-  await Promise.allSettled([
-    videoPromise,
-    audioPromise
+  // Fetch and parse the video and audio playlists concurrently
+  const [videoPlaylistContent, audioPlaylistContent] = await Promise.all([
+    fetch(videoPlaylistUrl).then(res => res.text()),
+    fetch(audioPlaylistUrl).then(res => res.text())
   ]);
 
-  // either merge the video and audio, or just rename the video file if there is no audio
-  if (await audioPromise) {
-    await ffmpeg.run('-i', 'video.mp4', '-i', 'audio.mp4', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0', '-map', '1:a:0', 'output.mp4');
-  } else {
-    await ffmpeg.run('-i', 'video.mp4', '-c:v', 'copy', '-c:a', 'copy', '-map', '0:v:0', 'output.mp4');
-  }
+  const videoParser = new Parser();
+  videoParser.push(videoPlaylistContent);
+  videoParser.end();
+  const videoPlaylist = videoParser.manifest;
 
-  // read the file into a buffer and exit ffmpeg
+  const audioParser = new Parser();
+  audioParser.push(audioPlaylistContent);
+  audioParser.end();
+  const audioPlaylist = audioParser.manifest;
+
+  // Fetch the first segments of video and audio concurrently
+  const [video, audio] = await Promise.all([
+    fetch(new URL(videoPlaylist.segments[0].uri, videoPlaylistUrl)).then(res => res.arrayBuffer()).then(buf => new Uint8Array(buf)),
+    fetch(new URL(audioPlaylist.segments[0].uri, audioPlaylistUrl)).then(res => res.arrayBuffer()).then(buf => new Uint8Array(buf))
+  ]);
+
+  // Write video and audio segments to ffmpeg FS
+  await ffmpeg.FS('writeFile', 'video.ts', video);
+  await ffmpeg.FS('writeFile', 'audio.aac', audio);
+
+  // Merge video and audio segments
+  await ffmpeg.run('-i', 'video.ts', '-i', 'audio.aac', '-c', 'copy', 'output.mp4');
   const data = ffmpeg.FS('readFile', 'output.mp4');
-  window.ffmpeg.exit();
 
-  // download the file from the buffer
+  // Download the file from the buffer
   const downloadLink = document.createElement('a');
-  downloadLink.href = window.URL.createObjectURL(new Blob([data.buffer], {
-    type: 'video/mp4'
-  }));
+  downloadLink.href = window.URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
   downloadLink.download = `${document.title}.mp4`;
   document.body.appendChild(downloadLink);
   downloadLink.click();
