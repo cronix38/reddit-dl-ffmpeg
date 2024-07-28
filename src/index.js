@@ -13,7 +13,7 @@ window.ffmpeg ??= createFFmpeg({
   if (!window.ffmpeg.isLoaded()) await window.ffmpeg.load();
 
   // Get the .m3u8 URL from the HTML
-  const m3u8Url = document.querySelector('[data-hls-url]')?.getAttribute('data-hls-url') ||  document.querySelector('shreddit-player source')?.getAttribute('src'); ;
+  const m3u8Url = document.querySelector('[data-hls-url]')?.getAttribute('data-hls-url') ||  document.querySelector('shreddit-player source')?.getAttribute('src');
   if (!m3u8Url) return;
 
   // Fetch and parse the master .m3u8 file
@@ -57,13 +57,20 @@ window.ffmpeg ??= createFFmpeg({
     fetch(new URL(audioPlaylist.segments[0].uri, audioPlaylistUrl)).then(res => res.arrayBuffer()).then(buf => new Uint8Array(buf))
   ]);
 
+  // Determine the segment file extensions
+  const videoExt = videoPlaylist.segments[0].uri.split('.').pop();
+  const audioExt = audioPlaylist.segments[0].uri.split('.').pop();
+  const videoFileName = `video.${videoExt}`;
+  const audioFileName = `audio.${audioExt}`;
+
   // Write video and audio segments to ffmpeg FS
-  await ffmpeg.FS('writeFile', 'video.ts', video);
-  await ffmpeg.FS('writeFile', 'audio.aac', audio);
+  await ffmpeg.FS('writeFile', videoFileName, video);
+  await ffmpeg.FS('writeFile', audioFileName, audio);
 
   // Merge video and audio segments
-  await ffmpeg.run('-i', 'video.ts', '-i', 'audio.aac', '-c', 'copy', 'output.mp4');
+  await ffmpeg.run('-i', videoFileName, '-i', audioFileName, '-c', 'copy', 'output.mp4');
   const data = ffmpeg.FS('readFile', 'output.mp4');
+  window.ffmpeg.exit();
 
   // Download the file from the buffer
   const downloadLink = document.createElement('a');
